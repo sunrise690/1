@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>本地刷题系统</title>
+  <meta name="theme-color" content="#2563eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="刷题系统">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="app-header">
+      <div>
+        <h1>本地刷题系统</h1>
+        <p id="bankStatus">正在读取 questions.txt...</p>
+      </div>
+      <label class="file-button">
+        导入 txt
+        <input id="fileInput" type="file" accept=".txt,text/plain">
+      </label>
+    </header>
+
+    <section class="panel controls-panel" aria-label="练习控制">
+      <div class="control-row">
+        <div class="segmented" role="group" aria-label="练习模式">
+          <button type="button" class="active" data-mode="sequence">顺序练习</button>
+          <button type="button" data-mode="random">随机练习</button>
+          <button type="button" data-mode="wrong">错题本</button>
+          <button type="button" data-mode="favorite">收藏题</button>
+        </div>
+        <div class="segmented compact" role="group" aria-label="题型筛选">
+          <button type="button" class="active" data-filter="all">全部</button>
+          <button type="button" data-filter="single">单选</button>
+          <button type="button" data-filter="multiple">多选</button>
+        </div>
+      </div>
+
+      <div class="control-row secondary">
+        <div class="stats">
+          <span id="questionCount">题库 0 题</span>
+          <span id="recordStats">已答 0 / 错题 0 / 收藏 0</span>
+        </div>
+        <div class="action-row">
+          <button type="button" id="restartBtn">重新开始</button>
+          <button type="button" id="clearRecordsBtn" class="muted">清空记录</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="emptyPanel" class="panel empty-panel hidden">
+      <h2>未加载题库</h2>
+      <p id="emptyMessage">请选择 txt 题库文件。</p>
+    </section>
+
+    <section id="quizPanel" class="panel quiz-panel">
+      <div class="quiz-topline">
+        <div>
+          <span id="typeBadge" class="badge">单选</span>
+          <span id="progressText">0 / 0</span>
+        </div>
+        <button type="button" id="favoriteBtn" class="favorite-btn" title="收藏题" aria-label="收藏题">☆</button>
+      </div>
+
+      <div class="progress-track" aria-hidden="true">
+        <div id="progressBar" class="progress-bar"></div>
+      </div>
+
+      <h2 id="questionTitle" class="question-title"></h2>
+      <form id="optionsForm" class="options-form"></form>
+
+      <div id="resultPanel" class="result-panel hidden"></div>
+
+      <div class="nav-row">
+        <button type="button" id="prevBtn">上一题</button>
+        <button type="button" id="submitBtn" class="primary">提交答案</button>
+        <button type="button" id="nextBtn">下一题</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("sw.js").catch(function () {});
+      });
+    }
+  </script>
+</body>
+</html>
