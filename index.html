@@ -78,11 +78,31 @@
 
       <div class="nav-row">
         <button type="button" id="prevBtn">上一题</button>
+        <button type="button" id="catalogBtn">题目目录</button>
         <button type="button" id="submitBtn" class="primary">提交答案</button>
         <button type="button" id="nextBtn">下一题</button>
       </div>
     </section>
   </main>
+
+  <div id="catalogOverlay" class="catalog-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="catalogTitle">
+    <section class="catalog-panel">
+      <header class="catalog-header">
+        <div>
+          <h2 id="catalogTitle">题目目录</h2>
+          <p id="catalogSummary">0 题</p>
+        </div>
+        <button type="button" id="catalogCloseBtn" aria-label="关闭目录">关闭</button>
+      </header>
+      <div class="catalog-legend" aria-hidden="true">
+        <span><i class="legend-dot current"></i>当前</span>
+        <span><i class="legend-dot answered"></i>已答</span>
+        <span><i class="legend-dot wrong"></i>错题</span>
+        <span><i class="legend-dot favorite"></i>收藏</span>
+      </div>
+      <div id="catalogGrid" class="catalog-grid"></div>
+    </section>
+  </div>
 
   <script src="app.js"></script>
   <script>
