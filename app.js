@@ -31,8 +31,13 @@
     optionsForm: document.getElementById("optionsForm"),
     resultPanel: document.getElementById("resultPanel"),
     prevBtn: document.getElementById("prevBtn"),
+    catalogBtn: document.getElementById("catalogBtn"),
     submitBtn: document.getElementById("submitBtn"),
-    nextBtn: document.getElementById("nextBtn")
+    nextBtn: document.getElementById("nextBtn"),
+    catalogOverlay: document.getElementById("catalogOverlay"),
+    catalogCloseBtn: document.getElementById("catalogCloseBtn"),
+    catalogSummary: document.getElementById("catalogSummary"),
+    catalogGrid: document.getElementById("catalogGrid")
   };
 
   const state = {
@@ -82,7 +87,18 @@
     dom.favoriteBtn.addEventListener("click", toggleFavorite);
     dom.prevBtn.addEventListener("click", () => moveQuestion(-1));
     dom.nextBtn.addEventListener("click", () => moveQuestion(1));
-    dom.submitBtn.addEventListener("click", submitAnswer);
+    dom.submitBtn.addEventListener("click", () => submitAnswer());
+    dom.catalogBtn.addEventListener("click", openCatalog);
+    dom.catalogCloseBtn.addEventListener("click", closeCatalog);
+    dom.catalogOverlay.addEventListener("click", (event) => {
+      if (event.target === dom.catalogOverlay) closeCatalog();
+    });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !dom.catalogOverlay.classList.contains("hidden")) {
+        closeCatalog();
+      }
+    });
 
     window.addEventListener("beforeunload", saveProgress);
   }
@@ -471,10 +487,17 @@
 
     renderOptions(question, selected, record);
     renderResult(question, record);
+    if (!dom.catalogOverlay.classList.contains("hidden")) {
+      renderCatalog();
+    }
 
     dom.prevBtn.disabled = state.currentIndex === 0;
     dom.nextBtn.disabled = state.currentIndex >= state.activeIds.length - 1;
-    dom.submitBtn.disabled = false;
+    dom.catalogBtn.disabled = !state.activeIds.length;
+    dom.submitBtn.disabled = question.type === "single";
+    dom.submitBtn.textContent = question.type === "single" ? "单选自动判题" : "提交答案";
+    dom.submitBtn.classList.toggle("muted", question.type === "single");
+    dom.submitBtn.classList.toggle("primary", question.type !== "single");
   }
 
   function renderOptions(question, selected, record) {
@@ -500,6 +523,9 @@
       input.checked = selected.includes(option.key);
       input.addEventListener("change", () => {
         state.drafts[question.id] = getSelectedAnswers();
+        if (question.type === "single") {
+          submitAnswer({ auto: true });
+        }
       });
 
       const text = document.createElement("span");
@@ -528,12 +554,13 @@
     `;
   }
 
-  function submitAnswer() {
+  function submitAnswer({ auto = false } = {}) {
     const question = getCurrentQuestion();
     if (!question) return;
 
     const selected = getSelectedAnswers();
     if (!selected.length) {
+      if (auto) return;
       dom.resultPanel.className = "result-panel wrong";
       dom.resultPanel.innerHTML = "<p><strong>请先选择答案。</strong></p>";
       return;
@@ -592,6 +619,56 @@
     state.currentIndex = nextIndex;
     saveProgress();
     render();
+    scrollQuizIntoView();
+  }
+
+  function openCatalog() {
+    renderCatalog();
+    dom.catalogOverlay.classList.remove("hidden");
+    document.body.classList.add("modal-open");
+  }
+
+  function closeCatalog() {
+    dom.catalogOverlay.classList.add("hidden");
+    document.body.classList.remove("modal-open");
+  }
+
+  function renderCatalog() {
+    if (!dom.catalogGrid) return;
+
+    dom.catalogGrid.innerHTML = "";
+    dom.catalogSummary.textContent = `${state.activeIds.length} 题`;
+
+    state.activeIds.forEach((id, index) => {
+      const question = state.questionMap.get(id);
+      if (!question) return;
+
+      const button = document.createElement("button");
+      const record = store.records[id];
+      button.type = "button";
+      button.className = "catalog-item";
+      button.textContent = String(index + 1);
+      button.title = `第 ${index + 1} 题，题号 ${question.number}`;
+      button.classList.toggle("current", index === state.currentIndex);
+      button.classList.toggle("answered", Boolean(record));
+      button.classList.toggle("wrong", store.wrongIds.has(id));
+      button.classList.toggle("favorite", store.favoriteIds.has(id));
+      button.addEventListener("click", () => {
+        state.currentIndex = index;
+        saveProgress();
+        render();
+        closeCatalog();
+        scrollQuizIntoView();
+      });
+
+      dom.catalogGrid.appendChild(button);
+    });
+  }
+
+  function scrollQuizIntoView() {
+    window.requestAnimationFrame(() => {
+      dom.quizPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function clearRecords() {
