@@ -6,7 +6,8 @@
     favorite: "localQuiz.favoriteIds.v1",
     records: "localQuiz.answerRecords.v1",
     progress: "localQuiz.progress.v1",
-    importedBank: "localQuiz.importedBank.v1"
+    importedBank: "localQuiz.importedBank.v1",
+    importedBankName: "localQuiz.importedBankName.v1"
   };
 
   const dom = {
@@ -17,6 +18,7 @@
     questionCount: document.getElementById("questionCount"),
     recordStats: document.getElementById("recordStats"),
     restartBtn: document.getElementById("restartBtn"),
+    defaultBankBtn: document.getElementById("defaultBankBtn"),
     clearRecordsBtn: document.getElementById("clearRecordsBtn"),
     emptyPanel: document.getElementById("emptyPanel"),
     emptyMessage: document.getElementById("emptyMessage"),
@@ -76,6 +78,7 @@
     });
 
     dom.clearRecordsBtn.addEventListener("click", clearRecords);
+    dom.defaultBankBtn.addEventListener("click", restoreDefaultBank);
     dom.favoriteBtn.addEventListener("click", toggleFavorite);
     dom.prevBtn.addEventListener("click", () => moveQuestion(-1));
     dom.nextBtn.addEventListener("click", () => moveQuestion(1));
@@ -85,6 +88,13 @@
   }
 
   async function loadInitialBank() {
+    const cachedBank = localStorage.getItem(STORAGE.importedBank);
+    if (cachedBank && cachedBank.trim()) {
+      const cachedName = localStorage.getItem(STORAGE.importedBankName) || "上次导入的题库";
+      loadBankText(cachedBank, `${cachedName}（已保存）`);
+      return;
+    }
+
     const embeddedBank = getEmbeddedBankText();
     if (embeddedBank) {
       loadBankText(embeddedBank, "离线内置题库");
@@ -95,12 +105,6 @@
 
     if (fetched) {
       loadBankText(fetched.text, fetched.source);
-      return;
-    }
-
-    const cachedBank = localStorage.getItem(STORAGE.importedBank);
-    if (cachedBank && cachedBank.trim()) {
-      loadBankText(cachedBank, "上次导入的题库");
       return;
     }
 
@@ -141,6 +145,7 @@
     try {
       const text = await readTextFile(file);
       localStorage.setItem(STORAGE.importedBank, text);
+      localStorage.setItem(STORAGE.importedBankName, file.name);
       loadBankText(text, file.name);
       event.target.value = "";
     } catch (error) {
@@ -598,6 +603,30 @@
     state.drafts = {};
     saveStore();
     rebuildPractice({ resetIndex: true, reshuffle: state.mode === "random" });
+  }
+
+  async function restoreDefaultBank() {
+    const confirmed = window.confirm("确定恢复默认题库吗？已导入的 txt 会从本机保存中移除，答题记录和收藏不会清空。");
+    if (!confirmed) return;
+
+    localStorage.removeItem(STORAGE.importedBank);
+    localStorage.removeItem(STORAGE.importedBankName);
+    localStorage.removeItem(STORAGE.progress);
+    state.drafts = {};
+
+    const embeddedBank = getEmbeddedBankText();
+    if (embeddedBank) {
+      loadBankText(embeddedBank, "离线内置题库");
+      return;
+    }
+
+    const fetched = await tryFetchQuestionsTxt();
+    if (fetched) {
+      loadBankText(fetched.text, fetched.source);
+      return;
+    }
+
+    showEmpty("已恢复默认设置，但浏览器未能读取默认题库。请点击右上角“导入 txt”选择题库文件。");
   }
 
   function getSelectedAnswers() {

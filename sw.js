@@ -1,4 +1,4 @@
-const CACHE_NAME = "local-quiz-pwa-v1";
+const CACHE_NAME = "local-quiz-pwa-v2";
 const CORE_FILES = [
   "./",
   "./index.html",

@@ -157,8 +157,9 @@ button:disabled {
 
 .action-row {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
-  white-space: nowrap;
 }
 
 .muted {
@@ -367,7 +368,7 @@ button:disabled {
 
   .action-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
 
   .nav-row {

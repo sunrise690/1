@@ -170,8 +170,9 @@ button:disabled {
 
 .action-row {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
-  white-space: nowrap;
 }
 
 .muted {
@@ -380,7 +381,7 @@ button:disabled {
 
   .action-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
 
   .nav-row {
@@ -440,6 +441,7 @@ button:disabled {
         </div>
         <div class="action-row">
           <button type="button" id="restartBtn">重新开始</button>
+          <button type="button" id="defaultBankBtn" class="muted">恢复默认题库</button>
           <button type="button" id="clearRecordsBtn" class="muted">清空记录</button>
         </div>
       </div>
@@ -488,7 +490,8 @@ window.EMBEDDED_QUESTIONS = "返回测试练习题库\r\n答题版本\r\n\r\n202
     favorite: "localQuiz.favoriteIds.v1",
     records: "localQuiz.answerRecords.v1",
     progress: "localQuiz.progress.v1",
-    importedBank: "localQuiz.importedBank.v1"
+    importedBank: "localQuiz.importedBank.v1",
+    importedBankName: "localQuiz.importedBankName.v1"
   };
 
   const dom = {
@@ -499,6 +502,7 @@ window.EMBEDDED_QUESTIONS = "返回测试练习题库\r\n答题版本\r\n\r\n202
     questionCount: document.getElementById("questionCount"),
     recordStats: document.getElementById("recordStats"),
     restartBtn: document.getElementById("restartBtn"),
+    defaultBankBtn: document.getElementById("defaultBankBtn"),
     clearRecordsBtn: document.getElementById("clearRecordsBtn"),
     emptyPanel: document.getElementById("emptyPanel"),
     emptyMessage: document.getElementById("emptyMessage"),
@@ -558,6 +562,7 @@ window.EMBEDDED_QUESTIONS = "返回测试练习题库\r\n答题版本\r\n\r\n202
     });
 
     dom.clearRecordsBtn.addEventListener("click", clearRecords);
+    dom.defaultBankBtn.addEventListener("click", restoreDefaultBank);
     dom.favoriteBtn.addEventListener("click", toggleFavorite);
     dom.prevBtn.addEventListener("click", () => moveQuestion(-1));
     dom.nextBtn.addEventListener("click", () => moveQuestion(1));
@@ -567,6 +572,13 @@ window.EMBEDDED_QUESTIONS = "返回测试练习题库\r\n答题版本\r\n\r\n202
   }
 
   async function loadInitialBank() {
+    const cachedBank = localStorage.getItem(STORAGE.importedBank);
+    if (cachedBank && cachedBank.trim()) {
+      const cachedName = localStorage.getItem(STORAGE.importedBankName) || "上次导入的题库";
+      loadBankText(cachedBank, `${cachedName}（已保存）`);
+      return;
+    }
+
     const embeddedBank = getEmbeddedBankText();
     if (embeddedBank) {
       loadBankText(embeddedBank, "离线内置题库");
@@ -577,12 +589,6 @@ window.EMBEDDED_QUESTIONS = "返回测试练习题库\r\n答题版本\r\n\r\n202
 
     if (fetched) {
       loadBankText(fetched.text, fetched.source);
-      return;
-    }
-
-    const cachedBank = localStorage.getItem(STORAGE.importedBank);
-    if (cachedBank && cachedBank.trim()) {
-      loadBankText(cachedBank, "上次导入的题库");
       return;
     }
 
@@ -623,6 +629,7 @@ window.EMBEDDED_QUESTIONS = "返回测试练习题库\r\n答题版本\r\n\r\n202
     try {
       const text = await readTextFile(file);
       localStorage.setItem(STORAGE.importedBank, text);
+      localStorage.setItem(STORAGE.importedBankName, file.name);
       loadBankText(text, file.name);
       event.target.value = "";
     } catch (error) {
@@ -1080,6 +1087,30 @@ window.EMBEDDED_QUESTIONS = "返回测试练习题库\r\n答题版本\r\n\r\n202
     state.drafts = {};
     saveStore();
     rebuildPractice({ resetIndex: true, reshuffle: state.mode === "random" });
+  }
+
+  async function restoreDefaultBank() {
+    const confirmed = window.confirm("确定恢复默认题库吗？已导入的 txt 会从本机保存中移除，答题记录和收藏不会清空。");
+    if (!confirmed) return;
+
+    localStorage.removeItem(STORAGE.importedBank);
+    localStorage.removeItem(STORAGE.importedBankName);
+    localStorage.removeItem(STORAGE.progress);
+    state.drafts = {};
+
+    const embeddedBank = getEmbeddedBankText();
+    if (embeddedBank) {
+      loadBankText(embeddedBank, "离线内置题库");
+      return;
+    }
+
+    const fetched = await tryFetchQuestionsTxt();
+    if (fetched) {
+      loadBankText(fetched.text, fetched.source);
+      return;
+    }
+
+    showEmpty("已恢复默认设置，但浏览器未能读取默认题库。请点击右上角“导入 txt”选择题库文件。");
   }
 
   function getSelectedAnswers() {
